@@ -27,16 +27,29 @@ print(
 
   """
 )
-st.header("PINGBRIDGE")
+with st.sidebar:
+    st.header("PINGBRIDGE")
 
-"""
-Følg favorittparet ditt underveis i turneringa!
+    """
+    Følg favorittparet ditt underveis i turneringa!
 
-Hvordan bruker du dette?
+    Hvordan bruker du dette?
 
-Lim inn link til live-resultatet du følger. Deretter velger du hvilket par
-du vil framheve.
-"""
+    Lim inn link til live-resultatet du følger. Deretter velger du hvilket par
+    du vil framheve.
+    """
+    if "key" not in st.session_state:
+        st.session_state["url"] = st.text_input(
+            "Lim inn link til arrangementets pbn-fil"
+        )
+
+    @st.cache_data
+    def get_pbn():
+        return st.session_state["url"]
+
+    if st.button("Hent nye resultater"):
+        url = get_pbn()
+
 
 # Results and charts on your favourite bridge partnership!
 
@@ -49,18 +62,8 @@ du vil framheve.
 # """
 
 
-url = "https://www.bridge.no/var/ruter/html/9901/2021-08-04.pbn"
-url = "https://www.bridge.no/var/ruter/html/9901/2022-08-10.pbn"
-pair_number = 35
-
-if "key" not in st.session_state:
-    st.session_state["url"] = st.text_input("Lim inn link til arrangementets pbn-fil")
-
-
-@st.cache_data
-def get_pbn():
-    return st.session_state["url"]
-
+# url = "https://www.bridge.no/var/ruter/html/9901/2021-08-04.pbn"
+# url = "https://www.bridge.no/var/ruter/html/9901/2022-08-10.pbn"
 
 url = get_pbn()
 
@@ -72,6 +75,12 @@ response = response.text
 # First, collect all boards into one dataframe
 
 # How to find a board?
+eventname = re.search(r'\[Event "(.*?)"', response)
+eventdate = re.search(r'\[Date "(\d{4})\.(\d\d).(\d\d)"', response)
+year, month, day = eventdate.groups()
+st.title(eventname.group(1))
+st.write(f"{day}.{month}.{year}")
+
 
 search_string = r"\[Board \"(?P<board>\d+)\"((.|\n)*?)\[ScoreTable (?P<headers>.*?)\](?P<scoretable>(.|\n)*?)\["
 pattern = re.compile(search_string)
@@ -251,7 +260,3 @@ with col1:
     st.pyplot(plot_slope(cum_round_scores, pairids, colors=colors))
 with col2:
     st.pyplot(plot_spaghetti(cum_round_scores, pairids, colors=colors))
-
-
-if st.button("Hent nye resultater"):
-    url = get_pbn()
