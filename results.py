@@ -40,7 +40,8 @@ with st.sidebar:
     """
     if "key" not in st.session_state:
         st.session_state["url"] = st.text_input(
-            "Lim inn link til arrangementets pbn-fil"
+            "Lim inn link til arrangementets pbn-fil",
+            value="https://www.bridge.no/var/ruter/html/9901/2023-05-19.pbn",
         )
 
     @st.cache_data
