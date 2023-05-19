@@ -18,6 +18,8 @@ pair_number = 76
 
 response = get(url).content
 
+def get_total_score():
+  
 print(response)
 
 
