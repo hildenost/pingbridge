@@ -64,9 +64,6 @@ def get_pbn():
 
 url = get_pbn()
 
-if st.button("Hent nye resultater"):
-    url = get_pbn()
-
 
 response = get(url)
 response.encoding = "ISO-8859-1"
@@ -190,31 +187,71 @@ all_pairids = np.unique(cum_round_scores.index.droplevel(1))
 
 # create pairlist
 temp = pairs[["PairId", "Names"]].sort_values(by="PairId")
+results = pairs
 pairlist = temp["PairId"].astype(str) + " " + temp["Names"].str.strip('"')
 
 pairs = st.multiselect("Velg par", pairlist)
+
+temp = round_scores.reset_index()
+curr_round = int(temp["Round"].max())
+
+st.metric("Siste runde", curr_round)
+
+
+df = cum_round_scores.unstack()
+poses = pd.DataFrame(index=df.index)
+for col in df.columns:
+    tmp = df[col].sort_values(ascending=False)
+    poses[col] = {pair: i + 1 for i, pair in enumerate(tmp.index)}
+
+import streamlit.components.v1 as components
+
+for pair in pairs:
+    st.header(pair)
+
+    pairid, name = pair.split(maxsplit=1)
+
+    selected_pair = results[results["PairId"] == int(pairid)]
+    idx = selected_pair.index.values[0]
+
+    res = selected_pair.loc[idx]
+    places = poses.loc[int(pairid)]
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric(
+            "Plassering", res["Rank"], -int(places[curr_round] - places[curr_round - 1])
+        )
+    with col2:
+        st.metric("Poeng", res["TotalScoreMP"], round_scores[(int(pairid), curr_round)])
+    with col3:
+        st.metric("Prosent", res["TotalPercentage"])
 
 pairids = [int(p.split(maxsplit=1)[0]) for p in pairs]
 
 colors = plt.cm.viridis(np.linspace(0, 1, len(pairids)))
 
 
-with st.sidebar:
-    # Create legend
-    from matplotlib.patches import Patch
-
-    legend_elements = [Patch(facecolor=c, label=pair) for c, pair in zip(colors, pairs)]
-
-    fig, ax = plt.subplots(layout="constrained")
-    ax.legend(handles=legend_elements, loc="center")
-    ax.axis("off")
-    ax.xaxis.set_visible(False)
-    ax.yaxis.set_visible(False)
-    st.pyplot(fig, clear_figure=True)
-
+# with st.sidebar:
+#    # Create legend
+#    from matplotlib.patches import Patch
+#
+#    legend_elements = [Patch(facecolor=c, label=pair) for c, pair in zip(colors, pairs)]
+#
+#    fig, ax = plt.subplots(layout="constrained")
+#    ax.legend(handles=legend_elements, loc="center")
+#    ax.axis("off")
+#    ax.xaxis.set_visible(False)
+#    ax.yaxis.set_visible(False)
+#    st.pyplot(fig, clear_figure=True)
+#
 
 col1, col2 = st.columns(2)
 with col1:
     st.pyplot(plot_slope(cum_round_scores, pairids, colors=colors))
 with col2:
     st.pyplot(plot_spaghetti(cum_round_scores, pairids, colors=colors))
+
+
+if st.button("Hent nye resultater"):
+    url = get_pbn()
