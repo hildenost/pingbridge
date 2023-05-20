@@ -101,8 +101,18 @@ def collect_pairs(response):
     scoretable = pattern.search(response)
 
     columns = re.split(r"\\[0-9]+[RL];?", scoretable.group("headers"))
+    # Remove empty columns
+    columns = [c for c in columns if c]
+    # TODO: ensure unique column names
 
     pair_df = pd.read_fwf(StringIO(scoretable.group("scoretable")), names=columns)
+
+    columns = pair_df.columns
+    nlevels = pair_df.index.nlevels
+
+    pair_df = pair_df.reset_index()
+    pair_df = pair_df.drop(pair_df.columns[-nlevels:], axis=1)
+    pair_df.columns = columns
     return pair_df
 
 
@@ -203,6 +213,7 @@ all_pairids = np.unique(cum_round_scores.index.droplevel(1))
 # create pairlist
 temp = pairs[["PairId", "Names"]].sort_values(by="PairId")
 results = pairs
+
 pairlist = temp["PairId"].astype(str) + " " + temp["Names"].str.strip('"')
 
 pairs = st.multiselect("Velg par", pairlist)
@@ -229,37 +240,36 @@ for pair in pairs:
     selected_pair = results[results["PairId"] == int(pairid)]
     idx = selected_pair.index.values[0]
     res = selected_pair.loc[idx]
+    st.dataframe(res)
 
     places = poses.loc[int(pairid)]
 
-    if "ScoreCarryOver" in res.index:
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            delta = int(places[curr_round])
-            if curr_round > 1:
-                delta -= places[curr_round - 1]
-            st.metric("Plassering", res["Rank"], -delta)
-        with col2:
-            st.metric(
-                "Poeng", res["TotalScoreMP"], round_scores[(int(pairid), curr_round)]
-            )
-        with col3:
-            st.metric("Prosent", res["TotalPercentage"])
-        with col4:
-            st.metric("Carry over", res["ScoreCarryOver"])
-    else:
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            delta = int(places[curr_round])
-            if curr_round > 1:
-                delta -= places[curr_round - 1]
-            st.metric("Plassering", res["Rank"], -delta)
-        with col2:
-            st.metric(
-                "Poeng", res["TotalScoreMP"], round_scores[(int(pairid), curr_round)]
-            )
-        with col3:
-            st.metric("Prosent", res["TotalPercentage"])
+    #    if "ScoreCarryOver" in res.index:
+    #        col1, col2, col3, col4 = st.columns(4)
+    #        with col1:
+    #            delta = int(places[curr_round])
+    #            if curr_round > 1:
+    #                delta -= places[curr_round - 1]
+    #            st.metric("Plassering", res["Rank"], str(-delta))
+    #        with col2:
+    #            st.metric(
+    #                "Poeng", res["TotalScoreMP"], round_scores[(int(pairid), curr_round)]
+    #            )
+    #        with col3:
+    #            st.metric("Prosent", res["TotalPercentage"])
+    #        with col4:
+    #            st.metric("Carry over", res["ScoreCarryOver"])
+    #    else:
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        delta = int(places[curr_round])
+        if curr_round > 1:
+            delta -= places[curr_round - 1]
+        st.metric("Plassering", res["Rank"], str(-delta))
+    with col2:
+        st.metric("Poeng", res["TotalScoreMP"], round_scores[(int(pairid), curr_round)])
+    with col3:
+        st.metric("Prosent", res["TotalPercentage"])
 
 pairids = [int(p.split(maxsplit=1)[0]) for p in pairs]
 
