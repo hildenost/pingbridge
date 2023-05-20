@@ -44,7 +44,6 @@ with st.sidebar:
             value="https://www.bridge.no/var/ruter/html/9901/2023-05-19.pbn",
         )
 
-    @st.cache_data
     def get_pbn():
         return st.session_state["url"]
 
@@ -67,6 +66,8 @@ with st.sidebar:
 # url = "https://www.bridge.no/var/ruter/html/9901/2022-08-10.pbn"
 
 url = get_pbn()
+
+print(url)
 
 
 response = get(url)
