@@ -41,7 +41,7 @@ with st.sidebar:
     if "key" not in st.session_state:
         st.session_state["url"] = st.text_input(
             "Lim inn link til arrangementets pbn-fil",
-            value="https://www.bridge.no/var/ruter/html/9901/2023-05-19.pbn",
+            value="https://www.bridge.no/var/ruter/html/9901/2023-05-20.pbn",
         )
 
     def get_pbn():
@@ -67,9 +67,6 @@ with st.sidebar:
 
 url = get_pbn()
 
-print(url)
-
-
 response = get(url)
 response.encoding = "ISO-8859-1"
 response = response.text
@@ -78,10 +75,16 @@ response = response.text
 
 # How to find a board?
 eventname = re.search(r'\[Event "(.*?)"', response)
+if eventname is None:
+    st.write("Beklager, det er ikke kommet resultater ennå. Prøv igjen senere.")
+
+if eventname is not None:
+    st.title(eventname.group(1))
+
 eventdate = re.search(r'\[Date "(\d{4})\.(\d\d).(\d\d)"', response)
-year, month, day = eventdate.groups()
-st.title(eventname.group(1))
-st.write(f"{day}.{month}.{year}")
+if eventdate is not None:
+    year, month, day = eventdate.groups()
+    st.write(f"{day}.{month}.{year}")
 
 
 search_string = r"\[Board \"(?P<board>\d+)\"((.|\n)*?)\[ScoreTable (?P<headers>.*?)\](?P<scoretable>(.|\n)*?)\["
@@ -188,6 +191,7 @@ def plot_slope(data, selected=None, colors=["m"]):
         color = highlights.get(pairid, "0.8")
         zorder = 1000 if pairid in selected else 1
         row.plot(color=color, zorder=zorder, marker="o")
+
     plt.gca().invert_yaxis()
 
     return fig
@@ -224,19 +228,38 @@ for pair in pairs:
 
     selected_pair = results[results["PairId"] == int(pairid)]
     idx = selected_pair.index.values[0]
-
     res = selected_pair.loc[idx]
+
     places = poses.loc[int(pairid)]
 
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric(
-            "Plassering", res["Rank"], -int(places[curr_round] - places[curr_round - 1])
-        )
-    with col2:
-        st.metric("Poeng", res["TotalScoreMP"], round_scores[(int(pairid), curr_round)])
-    with col3:
-        st.metric("Prosent", res["TotalPercentage"])
+    if "ScoreCarryOver" in res.index:
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            delta = int(places[curr_round])
+            if curr_round > 1:
+                delta -= places[curr_round - 1]
+            st.metric("Plassering", res["Rank"], -delta)
+        with col2:
+            st.metric(
+                "Poeng", res["TotalScoreMP"], round_scores[(int(pairid), curr_round)]
+            )
+        with col3:
+            st.metric("Prosent", res["TotalPercentage"])
+        with col4:
+            st.metric("Carry over", res["ScoreCarryOver"])
+    else:
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            delta = int(places[curr_round])
+            if curr_round > 1:
+                delta -= places[curr_round - 1]
+            st.metric("Plassering", res["Rank"], -delta)
+        with col2:
+            st.metric(
+                "Poeng", res["TotalScoreMP"], round_scores[(int(pairid), curr_round)]
+            )
+        with col3:
+            st.metric("Prosent", res["TotalPercentage"])
 
 pairids = [int(p.split(maxsplit=1)[0]) for p in pairs]
 
