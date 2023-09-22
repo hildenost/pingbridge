@@ -240,7 +240,7 @@ for pair in pairs:
     selected_pair = results[results["PairId"] == int(pairid)]
     idx = selected_pair.index.values[0]
     res = selected_pair.loc[idx]
-    st.dataframe(res)
+    #st.dataframe(res)
 
     places = poses.loc[int(pairid)]
 
